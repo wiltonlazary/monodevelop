@@ -50,10 +50,10 @@ namespace Mono.TextEditor
 			textEditor.TextViewModel.VisualBuffer.ChangedLowPriority += OnVisualBufferChanged;
 		}
 
-		internal void Add (int logicalLineNumber, DocumentLine line)
+		internal ITextViewLine Add (int logicalLineNumber, DocumentLine line)
 		{
 			if (line == null)
-				return;
+				return null;
 
 			if (Count == 0)
 				this.textSnapshot = textEditor.TextSnapshot;
@@ -64,7 +64,7 @@ namespace Mono.TextEditor
 			for (int i = 0; i < Count; i++) {
 				if (((MdTextViewLine)this [i]).LineNumber == logicalLineNumber) {
 					this [i] = newLine;
-					return;
+					return newLine;
 				}
 			}
 			int index = 0;
@@ -73,6 +73,7 @@ namespace Mono.TextEditor
 					break;
 			}
 			Insert (index, newLine);
+			return newLine;
 		}
 
 		internal void RemoveLinesBefore (int lineNumber)
@@ -153,15 +154,23 @@ namespace Mono.TextEditor
 
 			this.Clear ();
 
+			var newSnapshot = e.After;
 			foreach(MdTextViewLine line in reusedLinesCache) {
-				int lineNumber = line.LineNumber;
-				Add (lineNumber, textEditor.Document.GetLine (lineNumber));
+				var snapshotLine = textSnapshot.GetLineFromLineNumber (line.LineNumber - 1);
+				var lineStart = textSnapshot.CreateTrackingPoint (snapshotLine.Start, PointTrackingMode.Negative);
+				var newLineStart = lineStart.GetPosition (newSnapshot);
+				var newSnapshotLine = newSnapshot.GetLineFromPosition (newLineStart);
+				int lineNumber = newSnapshotLine.LineNumber + 1;
+				var documentLine = textEditor.Document.GetLine (lineNumber);
+
+				var newLine = new MdTextViewLine (this, textEditor, documentLine, lineNumber, textEditor.TextViewMargin.GetLayout (documentLine));
+				Add (newLine);
 			}
 
 			modifiedLinesCache.Clear ();
 			reusedLinesCache.Clear ();
 
-			textSnapshot = e.After;
+			textSnapshot = newSnapshot;
 		}
 
 		public bool IsValid => version.CompareAge (textEditor.Document.Version) == 0;
@@ -203,11 +212,20 @@ namespace Mono.TextEditor
 
 		public SnapshotSpan GetTextElementSpan (SnapshotPoint bufferPosition)
 		{
-			return new SnapshotSpan (bufferPosition, 1);
+			var line = GetTextViewLineContainingBufferPosition (bufferPosition);
+			if (line == null)
+				throw new ArgumentOutOfRangeException (nameof (bufferPosition));
+
+			return line.GetTextElementSpan (bufferPosition);
 		}
 
 		public ITextViewLine GetTextViewLineContainingBufferPosition (SnapshotPoint bufferPosition)
 		{
+			if (this.Count == 0) {
+				int caretLine = this.textEditor.Caret.Line;
+				Add (caretLine, textEditor.Document.GetLine (caretLine));
+			}
+
 			if (bufferPosition.Position < this [0].Start.Position)
 				return null;
 
@@ -233,7 +251,13 @@ namespace Mono.TextEditor
 					low = middle + 1;
 			}
 
-			return this[low - 1];
+			var result = this[low - 1];
+			if (!result.ContainsBufferPosition (bufferPosition)) {
+				int bufferPositionLine = this.textSnapshot.GetLineNumberFromPosition (bufferPosition.Position) + 1;
+				result = Add (bufferPositionLine, textEditor.Document.GetLine (bufferPositionLine));
+			}
+
+			return result;
 		}
 
 		public ITextViewLine GetTextViewLineContainingYCoordinate (double y)
