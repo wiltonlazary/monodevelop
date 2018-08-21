@@ -282,6 +282,7 @@
     <Compile Include="Mono.TextEditor\Gui\FoldMarkerMargin.VSCodeFoldMarkerMarginDrawer.cs" />
     <Compile Include="VSEditor\Text\Impl\WpfToolTipAdornment\ViewElementFactories\WpfObjectViewElementFactory.cs" />
     <Compile Include="Mono.TextEditor\Gui\TextEditorKeyPressTimings.cs" />
+    <Compile Include="MonoDevelop.SourceEditor\ClipboardRingService.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MonoDevelop.SourceEditor.addin.xml" />
