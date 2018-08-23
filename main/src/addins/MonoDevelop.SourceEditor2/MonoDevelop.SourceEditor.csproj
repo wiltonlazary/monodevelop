@@ -283,6 +283,7 @@
     <Compile Include="VSEditor\Text\Impl\WpfToolTipAdornment\ViewElementFactories\WpfObjectViewElementFactory.cs" />
     <Compile Include="Mono.TextEditor\Gui\TextEditorKeyPressTimings.cs" />
     <Compile Include="MonoDevelop.SourceEditor\ClipboardRingService.cs" />
+    <Compile Include="Mono.TextEditor\Gui\CodePreviewWindow.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MonoDevelop.SourceEditor.addin.xml" />
